@@ -74,6 +74,13 @@ zsh_llm_completion() {
     echo ""
     zle reset-prompt
   fi
+  if [[ "$mode" == "freestyle" ]]; then
+    echo ""
+    eval "cat $result_file"
+    echo ""
+    zle reset-prompt
+  fi
+
 }
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "$0" )" &> /dev/null && pwd )
