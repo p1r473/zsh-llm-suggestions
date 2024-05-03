@@ -29,6 +29,9 @@ bindkey '^o' zsh_llm_suggestions_openai # Ctrl + O to have OpenAI suggest a comm
 bindkey '^[^o' zsh_llm_suggestions_openai_explain # Ctrl + alt + O to have OpenAI explain a command
 bindkey '^p' zsh_llm_suggestions_github_copilot # Ctrl + P to have GitHub Copilot suggest a command given a English description
 bindkey '^[^p' zsh_llm_suggestions_github_copilot_explain # Ctrl + alt + P to have GitHub Copilot explain a command
+bindkey '^q' zsh_llm_suggestions_ollama # Ctrl + P to have Ollama suggest a command given a English description
+bindkey '^[^q' zsh_llm_suggestions_ollama_explain # Ctrl + alt + P to have Ollama explain a command
+bindkey '^r' zsh_llm_suggestions_ollama_freestyle # Ctrl + P to send a regular prompt to Ollama
 ```
 
 Make sure `python3` is installed.
@@ -83,6 +86,10 @@ If you typed a command (or maybe the LLM generated one) that you don't understan
 ctrl+alt+O to have OpenAI explain the command in English, or hit ctrl+alt+P to have
 GitHub Copilot explain it.
 
+### Freestyle
+
+Send a regular good old LLM prompt to Ollama.
+
 ## Warning
 
 There are some risks using `zsh-llm-suggestions`:
@@ -92,6 +99,7 @@ There are some risks using `zsh-llm-suggestions`:
 
 ## Supported LLMs
 
-Right now, two LLMs are supported:
+Right now, three LLMs are supported:
 1. GitHub Copilot (via GitHub CLI). Requires a GitHub Copilot subscription.
 2. OpenAI. Requires an OpenAI API key. Currently uses `gpt-4-1106-preview`.
+3. Ollama - can use any model
