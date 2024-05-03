@@ -49,7 +49,6 @@ def send_request(prompt):
 
 def zsh_llm_suggestions_ollama(prompt):
     try:
-        print("Processing your request...")
         result = send_request(prompt)
         return result
     except Exception as e:
