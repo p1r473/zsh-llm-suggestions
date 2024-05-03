@@ -16,7 +16,7 @@ def highlight_explanation(explanation):
         print(f'echo "{MISSING_PREREQUISITES} Install pygments" && pip3 install pygments')
         return explanation  # Return unhighlighted text if pygments is not installed
 
-def send_request(prompt, explain=False):
+def send_request(prompt):
     model = os.environ.get('ZSH_LLM_SUGGESTION_MODEL', 'tinyllama')
     data = json.dumps({
         "model": model,
