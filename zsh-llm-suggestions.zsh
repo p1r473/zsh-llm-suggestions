@@ -74,13 +74,17 @@ zsh_llm_completion() {
     echo ""
     zle reset-prompt
   fi
-  if [[ "$mode" == "freestyle" ]]; then
+ if [[ "$mode" == "freestyle" ]]; then
+    # Clear the current line
+    BUFFER=""
+    # Optionally, you might want to reset the cursor position
+    CURSOR=0
+    # Now, display the content from the result file and reset the prompt
     echo ""
-    eval "cat $result_file"
+    eval "cat '$result_file'"
     echo ""
-    zle reset-prompt
+    zle reset-prompt  fi
   fi
-
 }
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "$0" )" &> /dev/null && pwd )
