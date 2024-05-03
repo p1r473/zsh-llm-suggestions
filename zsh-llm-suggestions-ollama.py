@@ -17,6 +17,7 @@ def highlight_explanation(explanation):
         return explanation  # Return unhighlighted text if pygments is not installed
 
 def send_request(prompt):
+    server_address = os.environ.get('ZSH_LLM_SUGGESTION_SERVER', 'localhost:11434')
     model = os.environ.get('ZSH_LLM_SUGGESTION_MODEL', 'tinyllama')
     data = json.dumps({
         "model": model,
@@ -25,7 +26,7 @@ def send_request(prompt):
     })
     try:
         response = subprocess.run(
-            ["curl", "-XPOST", "localhost:11434/api/generate", "-H", "Content-Type: application/json", "-d", data],
+            ["curl", "-XPOST", f"http://{server_address}/api/generate", "-H", "Content-Type: application/json", "-d", data],
             capture_output=True,
             text=True,
             timeout=60
@@ -44,6 +45,7 @@ def send_request(prompt):
         return "Failed to decode the response. Please check the API response format."
     except Exception as e:
         return f"Error: {str(e)}"
+
 
 def zsh_llm_suggestions_ollama(prompt):
     try:
