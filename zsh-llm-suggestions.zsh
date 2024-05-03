@@ -94,7 +94,22 @@ zsh_llm_suggestions_github_copilot_explain() {
   zsh_llm_completion "$SCRIPT_DIR/zsh-llm-suggestions-github-copilot.py" "explain"
 }
 
+zsh_llm_suggestions_ollama() {
+  zsh_llm_completion "$SCRIPT_DIR/zsh-llm-suggestions-ollama.py" "generate"
+}
+
+zsh_llm_suggestions_ollama_explain() {
+  zsh_llm_completion "$SCRIPT_DIR/zsh-llm-suggestions-ollama.py" "explain"
+}
+
+zsh_llm_suggestions_ollama_freestyle() {
+  zsh_llm_completion "$SCRIPT_DIR/zsh-llm-suggestions-ollama.py" "freestyle"
+}
+
 zle -N zsh_llm_suggestions_openai
 zle -N zsh_llm_suggestions_openai_explain
 zle -N zsh_llm_suggestions_github_copilot
 zle -N zsh_llm_suggestions_github_copilot_explain
+zle -N zsh_llm_suggestions_ollama
+zle -N zsh_llm_suggestions_ollama_explain
+zle -N zsh_llm_suggestions_ollama_freestyle
