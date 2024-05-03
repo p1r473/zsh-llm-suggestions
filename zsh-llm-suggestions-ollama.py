@@ -25,7 +25,7 @@ def send_request(prompt):
     })
     try:
         response = subprocess.run(
-            ["curl", "-XPOST", "localhost:11434/api/generate", "-d", data],
+            ["curl", "-XPOST", "localhost:11434/api/generate", "-H", "Content-Type: application/json", "-d", data],
             capture_output=True,
             text=True,
             timeout=60
@@ -56,22 +56,26 @@ def zsh_llm_suggestions_ollama(prompt):
 
 def main():
     mode = sys.argv[1]
-    if mode != 'generate' and mode != 'explain':
+    if mode != 'generate' and mode != 'explain' and mode != 'freestyle':
         print("ERROR: something went wrong in zsh-llm-suggestions, please report a bug. Got unknown mode: " + mode)
         return
-
+    print("Mode " + mode)
     buffer = sys.stdin.read()
     if mode == 'generate':
         message = f"You are a ZSH shell expert. Please write a ZSH command that solves my query. You should only output the completed command. Do not include any explanation at all. The query follows: '{buffer}'"
     elif mode == 'explain':
         message = f"You are a ZSH shell expert. Please briefly explain how the given command works. Be as concise as possible. Use Markdown syntax for formatting. The command follows: '{buffer}'"
+    elif mode == 'freestyle':
+        message = f"{buffer}"
     result = zsh_llm_suggestions_ollama(message)
-
+    
     if mode == 'generate':
         result = result.replace('```bash', '').replace('```zsh', '').replace('```', '').strip()
         print(result)
     elif mode == 'explain':
         print(highlight_explanation(result))
+    elif mode == 'freestyle':
+        print(result)
 
 if __name__ == '__main__':
     main()
