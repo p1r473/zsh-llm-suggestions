@@ -150,7 +150,6 @@ def main():
             print(f"Unexpected error when loading context: {e}")
 
     result, new_context = zsh_llm_suggestions_ollama(buffer, system_message, context)
-    print(system_message)
     if mode == 'freestyle':
         # Save the new context only for freestyle mode
         try:
