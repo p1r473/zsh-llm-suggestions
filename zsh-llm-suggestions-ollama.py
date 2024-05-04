@@ -127,12 +127,11 @@ def main():
     username = get_current_username()
     cpu_usage, memory_usage = get_system_load()
     if mode == 'generate':
-        system_message = f"You are a ZSH shell expert using {os_info} on {cpu_arch}, shell version {shell_version}, running as {'root' if user_is_root else 'non-root'} as user {username}. Your system is on {hostname} ({ip_address}), with CPU usage at {cpu_usage}% and memory usage at {memory_usage}%. Please write a ZSH command that solves my query without any additional explanation."
+        system_message = f"You are a ZSH shell expert using {os_info} on {cpu_arch}, shell version {shell_version}, running as {'root' if user_is_root else f'non-root as user {username}'}. Your system is on {hostname} ({ip_address}), with CPU usage at {cpu_usage}% and memory usage at {memory_usage}%. Please write a ZSH command that solves my query without any additional explanation."
     elif mode == 'explain':
-        system_message = f"You are a ZSH shell expert using {os_info} on {cpu_arch}, shell version {shell_version}, running as {'root' if user_is_root else 'non-root'} as user {username}. Your system is on {hostname} ({ip_address}), with CPU usage at {cpu_usage}% and memory usage at {memory_usage}%. Please briefly explain how the given command works. Be as concise as possible using Markdown syntax."
+        system_message = f"You are a ZSH shell expert using {os_info} on {cpu_arch}, shell version {shell_version}, running as {'root' if user_is_root else f'non-root as user {username}'}. Your system is on {hostname} ({ip_address}), with CPU usage at {cpu_usage}% and memory usage at {memory_usage}%. Please briefly explain how the given command works. Be as concise as possible using Markdown syntax."
     elif mode == 'freestyle':
-        system_message = f"You are a ZSH shell expert using {os_info} on {cpu_arch}, shell version {shell_version}, running as {'root' if user_is_root else 'non-root'} as user {username}. Your system is on {hostname} ({ip_address}), with CPU usage at {cpu_usage}% and memory usage at {memory_usage}%."
-        print(system_message)
+        system_message = f"You are a ZSH shell expert using {os_info} on {cpu_arch}, shell version {shell_version}, running as {'root' if user_is_root else f'non-root as user {username}'}. Your system is on {hostname} ({ip_address}), with CPU usage at {cpu_usage}% and memory usage at {memory_usage}%."
         # Load the previous context only for freestyle mode
         try:
             with open(os.path.expanduser('~/.ollama_history'), 'r') as file:
