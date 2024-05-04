@@ -143,12 +143,13 @@ def main():
                     context = json.loads(file_contents)
         except FileNotFoundError:
             context = None  # Handle the case where the file does not exist
+            #system_message = ""
         except json.JSONDecodeError:
             print("Failed to decode JSON from context file. It may be corrupt or empty.")
             context = None
         except Exception as e:
             print(f"Unexpected error when loading context: {e}")
-
+    print(system_message)
     result, new_context = zsh_llm_suggestions_ollama(buffer, system_message, context)
     result=filter_non_ascii(result)
     if mode == 'freestyle':
