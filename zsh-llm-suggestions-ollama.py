@@ -99,11 +99,12 @@ def main():
 
     if mode == 'generate':
         result = result.replace('```bash', '').replace('```zsh', '').replace('```', '').strip()
-        print(result)
+        print(result)  # Print the result after stripping
     elif mode == 'explain':
-        print(highlight_explanation(result))
+        explanation = highlight_explanation(result)
+        print(explanation.strip())  # Strip after processing if necessary
     elif mode == 'freestyle':
-        print(result)
+        print(result.strip())  # Strip before printing
 
 if __name__ == '__main__':
     main()
