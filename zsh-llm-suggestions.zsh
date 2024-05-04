@@ -151,6 +151,7 @@ def main():
 
     result, new_context = zsh_llm_suggestions_ollama(buffer, system_message, context)
     result=filter_non_ascii(result)
+    new_context=filter_non_ascii(new_context)
     if mode == 'freestyle':
         # Save the new context only for freestyle mode
         try:
