@@ -144,7 +144,7 @@ def main():
                     context = json.loads(file_contents)
         except FileNotFoundError:
             context = None  # Handle the case where the file does not exist
-            if freestyle_system_message is not None:
+            if freestyle_system_message:
                 system_message = freestyle_system_message
         except json.JSONDecodeError:
             print("Failed to decode JSON from context file. It may be corrupt or empty.")
