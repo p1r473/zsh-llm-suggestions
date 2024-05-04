@@ -124,6 +124,7 @@ def main():
     cpu_arch = get_cpu_architecture()
     path, home, ld_library_path = get_env_vars()
     username = get_current_username()
+    freestyle_system_message = os.environ.get('OLLAMA_FREESTYLE_SYSTEM_MESSAGE')
 
     #Unused
     #hostname, ip_address = get_network_info()
@@ -143,7 +144,8 @@ def main():
                     context = json.loads(file_contents)
         except FileNotFoundError:
             context = None  # Handle the case where the file does not exist
-            #system_message = ""
+            if freestyle_system_message is not None:
+                system_message = freestyle_system_message
         except json.JSONDecodeError:
             print("Failed to decode JSON from context file. It may be corrupt or empty.")
             context = None
