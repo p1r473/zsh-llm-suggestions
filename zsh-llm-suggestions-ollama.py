@@ -3,6 +3,57 @@ import sys
 import subprocess
 import json
 import os
+import platform
+import distro
+import subprocess
+import os
+import socket
+import psutil
+
+def get_system_load():
+    cpu_usage = psutil.cpu_percent(interval=1)
+    memory_usage = psutil.virtual_memory().percent
+    return cpu_usage, memory_usage
+
+def get_shell_version():
+    result = subprocess.run(["zsh", "--version"], capture_output=True, text=True)
+    return result.stdout.strip()
+
+def is_user_root():
+    return os.geteuid() == 0
+
+def get_cpu_architecture():
+    return platform.machine()
+
+def get_network_info():
+    hostname = socket.gethostname()
+    ip_address = socket.gethostbyname(hostname)
+    return hostname, ip_address
+
+def get_env_vars():
+    path = os.getenv('PATH')
+    home = os.getenv('HOME')
+    ld_library_path = os.getenv('LD_LIBRARY_PATH')
+    return path, home, ld_library_path
+
+def get_current_username():
+    return os.environ.get('USER', os.environ.get('USERNAME', 'Unknown User'))
+
+def get_os_info():
+    try:
+        # This will work on Linux distributions with the distro module installed
+        os_id = distro.id()
+        os_version = distro.version()
+        os_name = distro.name()
+        return f"{os_name} ({os_id} {os_version})".strip()
+    except ModuleNotFoundError:
+        # Fallback for non-Linux platforms
+        system = platform.system()
+        version = platform.version()
+        return f"{system} {version}".strip()
+
+def filter_non_ascii(text):
+    return ''.join(char for char in text if ord(char) < 128)
 
 MISSING_PREREQUISITES = "zsh-llm-suggestions missing prerequisites:"
 
@@ -65,46 +116,55 @@ def main():
 
     buffer = sys.stdin.read()
     system_message = None
-    if mode == 'generate':
-        system_message = "You are a ZSH shell expert. Please write a ZSH command that solves my query. Do not include any explanation at all."
-    elif mode == 'explain':
-        system_message = "You are a ZSH shell expert. Please briefly explain how the given command works. Be as concise as possible. Use Markdown syntax for formatting."
+    context = None  # Initialize context to None
 
-    # Load the previous context
-    try:
-        with open(os.path.expanduser('~/.ollama_history'), 'r') as file:
-            file_contents = file.read().strip()  # Read and strip whitespace
-            if file_contents:  # Check if the file is not empty
-                context = json.loads(file_contents)
-            else:
-                context = None  # Set context to None if the file is empty
-    except FileNotFoundError:
-        context = None  # Handle the case where the file does not exist
-    except json.JSONDecodeError:
-        print("Failed to decode JSON from context file. It may be corrupt or empty.")
-        context = None  # Reset context if there's an error decoding it
-    except Exception as e:
-        print(f"Unexpected error when loading context: {e}")
-        context = None
+    os_info = get_os_info()
+    shell_version = get_shell_version()
+    user_is_root = is_user_root()
+    cpu_arch = get_cpu_architecture()
+    hostname, ip_address = get_network_info()
+    path, home, ld_library_path = get_env_vars() 
+    username = get_current_username()
+    cpu_usage, memory_usage = get_system_load()
+    if mode == 'generate':
+        system_message = f"You are a ZSH shell expert using {os_info} on {cpu_arch}, shell version {shell_version}, running as {'root' if user_is_root else 'non-root'} as user {username}. Your system is on {hostname} ({ip_address}), with CPU usage at {cpu_usage}% and memory usage at {memory_usage}%. Please write a ZSH command that solves my query without any additional explanation."
+    elif mode == 'explain':
+        system_message = f"You are a ZSH shell expert using {os_info} on {cpu_arch}, shell version {shell_version}, running as {'root' if user_is_root else 'non-root'} as user {username}. Your system is on {hostname} ({ip_address}), with CPU usage at {cpu_usage}% and memory usage at {memory_usage}%. Please briefly explain how the given command works. Be as concise as possible using Markdown syntax."
+    elif mode == 'freestyle':
+        system_message = f"You are a ZSH shell expert using {os_info} on {cpu_arch}, shell version {shell_version}, running as {'root' if user_is_root else 'non-root'} as user {username}. Your system is on {hostname} ({ip_address}), with CPU usage at {cpu_usage}% and memory usage at {memory_usage}%."
+        print(system_message)
+        # Load the previous context only for freestyle mode
+        try:
+            with open(os.path.expanduser('~/.ollama_history'), 'r') as file:
+                file_contents = file.read().strip()
+                if file_contents:
+                    context = json.loads(file_contents)
+        except FileNotFoundError:
+            context = None  # Handle the case where the file does not exist
+        except json.JSONDecodeError:
+            print("Failed to decode JSON from context file. It may be corrupt or empty.")
+            context = None
+        except Exception as e:
+            print(f"Unexpected error when loading context: {e}")
 
     result, new_context = zsh_llm_suggestions_ollama(buffer, system_message, context)
 
-    # Store the new context
-    try:
-        with open(os.path.expanduser('~/.ollama_history'), 'w') as file:
-            if new_context is not None:
-                file.write(json.dumps(new_context))  # Assuming new_context needs to be serialized
-    except Exception as e:
-        print(f"Error saving context: {e}")
+    if mode == 'freestyle':
+        # Save the new context only for freestyle mode
+        try:
+            with open(os.path.expanduser('~/.ollama_history'), 'w') as file:
+                if new_context is not None:
+                    file.write(json.dumps(new_context))
+        except Exception as e:
+            print(f"Error saving context: {e}")
 
     if mode == 'generate':
         result = result.replace('```bash', '').replace('```zsh', '').replace('```', '').strip()
-        print(result)  # Print the result after stripping
+        print(result)
     elif mode == 'explain':
-        explanation = highlight_explanation(result)
-        print(explanation.strip())  # Strip after processing if necessary
+        print(highlight_explanation(result))
     elif mode == 'freestyle':
-        print(result.strip())  # Strip before printing
+        print(result)
 
 if __name__ == '__main__':
     main()
