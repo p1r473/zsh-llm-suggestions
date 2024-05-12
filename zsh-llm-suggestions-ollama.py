@@ -122,9 +122,10 @@ def main():
     shell_version = get_shell_version()
     user_is_root = is_user_root()
     cpu_arch = get_cpu_architecture()
-    path, home, ld_library_path = get_env_vars() 
+    path, home, ld_library_path = get_env_vars()
     username = get_current_username()
-    
+    freestyle_system_message = os.environ.get('OLLAMA_FREESTYLE_SYSTEM_MESSAGE')
+
     #Unused
     #hostname, ip_address = get_network_info()
     #cpu_usage, memory_usage = get_system_load()
@@ -143,13 +144,15 @@ def main():
                     context = json.loads(file_contents)
         except FileNotFoundError:
             context = None  # Handle the case where the file does not exist
+            if freestyle_system_message:
+                system_message = freestyle_system_message
         except json.JSONDecodeError:
             print("Failed to decode JSON from context file. It may be corrupt or empty.")
             context = None
         except Exception as e:
             print(f"Unexpected error when loading context: {e}")
-
     result, new_context = zsh_llm_suggestions_ollama(buffer, system_message, context)
+    result=filter_non_ascii(result)
     if mode == 'freestyle':
         # Save the new context only for freestyle mode
         try:
