@@ -9,7 +9,7 @@ zsh_llm_suggestions_spinner() {
       echo -ne "\e[?25h"
     }
     trap cleanup SIGINT
-    
+
     echo -ne "\e[?25l"
     while [ "$(ps a | awk '{print $1}' | grep $pid)" ]; do
         local temp=${spinstr#?}
@@ -59,7 +59,7 @@ zsh_llm_completion() {
   local pid=$REPLY
   # Call the spinner function and pass the PID
   zsh_llm_suggestions_spinner $pid
-  
+
   if [[ "$mode" == "generate" ]]; then
     # Place the query in the history first
     print -s $query
