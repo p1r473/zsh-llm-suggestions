@@ -87,7 +87,7 @@ zsh_llm_completion() {
   fi
 }
 
-SCRIPT_DIR=$( cd -- "$( dirname -- "$0" )" &> /dev/null && pwd )
+local SCRIPT_DIR=$( cd -- "$( dirname -- "$0" )" &> /dev/null && pwd )
 
 zsh_llm_suggestions_openai() {
   zsh_llm_completion "$SCRIPT_DIR/zsh-llm-suggestions-openai.py" "generate"
