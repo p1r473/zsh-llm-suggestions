@@ -87,8 +87,6 @@ zsh_llm_completion() {
   fi
 }
 
-local SCRIPT_DIR=$( cd -- "$( dirname -- "$0" )" &> /dev/null && pwd )
-
 zsh_llm_suggestions_openai() {
   zsh_llm_completion "$SCRIPT_DIR/zsh-llm-suggestions-openai.py" "generate"
 }
@@ -114,7 +112,7 @@ zsh_llm_suggestions_ollama_explain() {
 }
 
 zsh_llm_suggestions_ollama_freestyle() {
-  zsh_llm_completion "$SCRIPT_DIR/zsh-llm-suggestions-ollama.py" "freestyle"
+  zsh_llm_completion "$(dirname "${(%):-%x}")/zsh-llm-suggestions-ollama.py" "freestyle"
 }
 
 zle -N zsh_llm_suggestions_openai
