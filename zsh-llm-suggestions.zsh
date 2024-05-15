@@ -5,7 +5,6 @@ context_window_size = 4096
 curl_max_time = 3
 curl_connect_timeout = 3
 
-
 import sys
 import subprocess
 import json
@@ -99,8 +98,15 @@ def send_request(prompt, system_message=None, context=None):
         "-H", "Content-Type: application/json",
         "-d", json.dumps(data)
     ]
+
     try:
-        response = subprocess.run(curl_command, capture_output=True, text=True, timeout=60)
+        response = subprocess.run(
+            curl_command,
+            capture_output=True,
+            text=True,
+            timeout=60  # Overall timeout for the subprocess.run call
+        )
+        
         if response.stdout:
             json_response = json.loads(response.stdout)
             return json_response.get('response', 'No response received.'), json_response.get('context', None)
@@ -112,14 +118,6 @@ def send_request(prompt, system_message=None, context=None):
         return "Failed to decode the response. Please check the API response format.", None
     except Exception as e:
         return f"Error: {str(e)}", None
-
-def zsh_llm_suggestions_ollama(prompt, system_message=None, context=None):
-    try:
-        result, new_context = send_request(prompt, system_message, context)
-        return result, new_context
-    except Exception as e:
-        print(f"Error: {e}")
-        return "", None
 
 def main():
     mode = sys.argv[1]
@@ -138,11 +136,6 @@ def main():
     path, home, ld_library_path = get_env_vars()
     username = get_current_username()
     freestyle_system_message = os.environ.get('OLLAMA_FREESTYLE_SYSTEM_MESSAGE')
-
-    #Unused
-    #hostname, ip_address = get_network_info()
-    #cpu_usage, memory_usage = get_system_load()
-    #Your system is on {hostname} ({ip_address}), with CPU usage at {cpu_usage}% and memory usage at {memory_usage}%
 
     if mode == 'generate':
         system_message = f"You are a ZSH shell expert using {os_info} on {cpu_arch}, shell version {shell_version}, running as {'root' if user_is_root else f'non-root as user {username}'}. Please write a ZSH command that solves my query without any additional explanation."
@@ -164,8 +157,15 @@ def main():
             context = None
         except Exception as e:
             print(f"Unexpected error when loading context: {e}")
-    result, new_context = zsh_llm_suggestions_ollama(buffer, system_message, context)
-    result=filter_non_ascii(result)
+
+    try:
+        result, new_context = send_request(buffer, system_message, context)
+    except Exception as e:
+        print(f"Error: {e}")
+        result, new_context = "", None
+
+    result = filter_non_ascii(result)
+
     if mode == 'freestyle':
         # Save the new context only for freestyle mode
         try:
