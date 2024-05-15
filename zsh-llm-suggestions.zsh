@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # User-configurable variables
-context_window_size = 4096
+context_window_size = 8192
 curl_max_time = 60
 curl_connect_timeout = 60
 
