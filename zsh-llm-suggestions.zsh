@@ -91,14 +91,16 @@ def send_request(prompt, system_message=None, context=None):
     if context:
         data["context"] = context
 
+    curl_command = [
+        "curl", "-sSk", "--ipv4",
+        "--max-time", str(curl_max_time),
+        "--connect-timeout", str(curl_connect_timeout),
+        "-XPOST", f"http://{server_address}/api/generate",
+        "-H", "Content-Type: application/json",
+        "-d", json.dumps(data)
+    ]
     try:
-        response = subprocess.run(
-            ["curl", "-sSk", "--ipv4", "--max-time", str(curl_max_time), "--connect-timeout", str(curl_connect_timeout), 
-             "-XPOST", f"http://{server_address}/api/generate", "-H", "Content-Type: application/json", "-d", json.dumps(data)],
-            capture_output=True,
-            text=True,
-            timeout=60
-        )
+        response = subprocess.run(curl_command, capture_output=True, text=True, timeout=60)
         if response.stdout:
             json_response = json.loads(response.stdout)
             return json_response.get('response', 'No response received.'), json_response.get('context', None)
