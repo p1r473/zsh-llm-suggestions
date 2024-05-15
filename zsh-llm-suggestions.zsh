@@ -2,8 +2,8 @@
 
 # User-configurable variables
 context_window_size = 4096
-curl_max_time = 3
-curl_connect_timeout = 3
+curl_max_time = 60
+curl_connect_timeout = 60
 
 import sys
 import subprocess
