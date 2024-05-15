@@ -1,124 +1,185 @@
+#!/usr/bin/env python3
 
-zsh_llm_suggestions_spinner() {
-    local pid=$1
-    local delay=0.1
-    local spinstr='|/-\'
+# User-configurable variables
+context_window_size = 4096
+curl_max_time = 3
+curl_connect_timeout = 3
 
-    cleanup() {
-      kill $pid
-      echo -ne "\e[?25h"
+
+import sys
+import subprocess
+import json
+import os
+import platform
+import distro
+import subprocess
+import os
+import socket
+import psutil
+
+def get_system_load():
+    cpu_usage = psutil.cpu_percent(interval=1)
+    memory_usage = psutil.virtual_memory().percent
+    return cpu_usage, memory_usage
+
+def get_shell_version():
+    result = subprocess.run(["zsh", "--version"], capture_output=True, text=True)
+    return result.stdout.strip()
+
+def is_user_root():
+    return os.geteuid() == 0
+
+def get_cpu_architecture():
+    return platform.machine()
+
+def get_network_info():
+    hostname = socket.gethostname()
+    ip_address = socket.gethostbyname(hostname)
+    return hostname, ip_address
+
+def get_env_vars():
+    path = os.getenv('PATH')
+    home = os.getenv('HOME')
+    ld_library_path = os.getenv('LD_LIBRARY_PATH')
+    return path, home, ld_library_path
+
+def get_current_username():
+    return os.environ.get('USER', os.environ.get('USERNAME', 'Unknown User'))
+
+def get_os_info():
+    try:
+        # This will work on Linux distributions with the distro module installed
+        os_id = distro.id()
+        os_version = distro.version()
+        os_name = distro.name()
+        return f"{os_name} ({os_id} {os_version})".strip()
+    except ModuleNotFoundError:
+        # Fallback for non-Linux platforms
+        system = platform.system()
+        version = platform.version()
+        return f"{system} {version}".strip()
+
+def filter_non_ascii(text):
+    return ''.join(char for char in text if ord(char) < 128)
+
+MISSING_PREREQUISITES = "zsh-llm-suggestions missing prerequisites:"
+
+def highlight_explanation(explanation):
+    try:
+        import pygments
+        from pygments.lexers import MarkdownLexer
+        from pygments.formatters import TerminalFormatter
+        return pygments.highlight(explanation, MarkdownLexer(), TerminalFormatter(style='material'))
+    except ImportError:
+        print(f'echo "{MISSING_PREREQUISITES} Install pygments" && pip3 install pygments')
+        return explanation  # Return unhighlighted text if pygments is not installed
+
+def send_request(prompt, system_message=None, context=None):
+    server_address = os.environ.get('ZSH_LLM_SUGGESTION_SERVER', 'localhost:11434')
+    model = os.environ.get('ZSH_LLM_SUGGESTION_MODEL', 'tinyllama')
+    data = {
+        "model": model,
+        "prompt": prompt,
+        "keep_alive": "30m",
+        "stream": False,
+        "options": {
+            "num_ctx": context_window_size
+        }
     }
-    trap cleanup SIGINT
+    if system_message:
+        data["system"] = system_message
+    if context:
+        data["context"] = context
 
-    echo -ne "\e[?25l"
-    while [ "$(ps a | awk '{print $1}' | grep $pid)" ]; do
-        local temp=${spinstr#?}
-        printf " [%c]" "$spinstr"
-        local spinstr=$temp${spinstr%"$temp"}
-        sleep $delay
-        printf "\b\b\b\b"
-    done
-    printf "    \b\b\b\b"
+    try:
+        response = subprocess.run(
+            ["curl", "-sSk", "--ipv4", "--max-time", str(curl_max_time), "--connect-timeout", str(curl_connect_timeout), 
+             "-XPOST", f"http://{server_address}/api/generate", "-H", "Content-Type: application/json", "-d", json.dumps(data)],
+            capture_output=True,
+            text=True,
+            timeout=60
+        )
+        if response.stdout:
+            json_response = json.loads(response.stdout)
+            return json_response.get('response', 'No response received.'), json_response.get('context', None)
+        else:
+            return "No response received.", None
+    except subprocess.TimeoutExpired:
+        return "Request timed out. Please try again.", None
+    except json.JSONDecodeError:
+        return "Failed to decode the response. Please check the API response format.", None
+    except Exception as e:
+        return f"Error: {str(e)}", None
 
-    echo -ne "\e[?25h"
-    trap - SIGINT
-}
+def zsh_llm_suggestions_ollama(prompt, system_message=None, context=None):
+    try:
+        result, new_context = send_request(prompt, system_message, context)
+        return result, new_context
+    except Exception as e:
+        print(f"Error: {e}")
+        return "", None
 
-zsh_llm_suggestions_run_query() {
-  local llm="$1"
-  local query="$2"
-  local result_file="$3"
-  local mode="$4"
-  echo -n "$query" | eval $llm $mode > $result_file
-}
+def main():
+    mode = sys.argv[1]
+    if mode not in ['generate', 'explain', 'freestyle']:
+        print("ERROR: something went wrong in zsh-llm-suggestions, please report a bug. Got unknown mode: " + mode)
+        return
 
-zsh_llm_completion() {
-  local llm="$1"
-  local mode="$2"
-  local query=${BUFFER}
+    buffer = sys.stdin.read()
+    system_message = None
+    context = None  # Initialize context to None
 
-  # Empty prompt, nothing to do
-  if [[ "$query" == "" ]]; then
-    return
-  fi
+    os_info = get_os_info()
+    shell_version = get_shell_version()
+    user_is_root = is_user_root()
+    cpu_arch = get_cpu_architecture()
+    path, home, ld_library_path = get_env_vars()
+    username = get_current_username()
+    freestyle_system_message = os.environ.get('OLLAMA_FREESTYLE_SYSTEM_MESSAGE')
 
-  # If the prompt is the last suggestions, just get another suggestion for the same query
-  if [[ "$mode" == "generate" ]]; then
-    if [[ "$query" == "$ZSH_LLM_SUGGESTIONS_LAST_RESULT" ]]; then
-      query=$ZSH_LLM_SUGGESTIONS_LAST_QUERY
-    else
-      ZSH_LLM_SUGGESTIONS_LAST_QUERY="$query"
-    fi
-  fi
+    #Unused
+    #hostname, ip_address = get_network_info()
+    #cpu_usage, memory_usage = get_system_load()
+    #Your system is on {hostname} ({ip_address}), with CPU usage at {cpu_usage}% and memory usage at {memory_usage}%
 
-  # Temporary file to store the result of the background process
-  local result_file="/tmp/zsh-llm-suggestions-result"
-  # Run the actual query in the background (since it's long-running, and so that we can show a spinner)
-  read < <( zsh_llm_suggestions_run_query $llm $query $result_file $mode & echo $! )
-  # Get the PID of the background process
-  local pid=$REPLY
-  # Call the spinner function and pass the PID
-  zsh_llm_suggestions_spinner $pid
+    if mode == 'generate':
+        system_message = f"You are a ZSH shell expert using {os_info} on {cpu_arch}, shell version {shell_version}, running as {'root' if user_is_root else f'non-root as user {username}'}. Please write a ZSH command that solves my query without any additional explanation."
+    elif mode == 'explain':
+        system_message = f"You are a ZSH shell expert using {os_info} on {cpu_arch}, shell version {shell_version}, running as {'root' if user_is_root else f'non-root as user {username}'}. Please briefly explain how the given command works. Be as concise as possible using Markdown syntax."
+    elif mode == 'freestyle':
+        # Load the previous context only for freestyle mode
+        try:
+            with open(os.path.expanduser('~/.ollama_history'), 'r') as file:
+                file_contents = file.read().strip()
+                if file_contents:
+                    context = json.loads(file_contents)
+        except FileNotFoundError:
+            context = None  # Handle the case where the file does not exist
+            if freestyle_system_message:
+                system_message = freestyle_system_message
+        except json.JSONDecodeError:
+            print("Failed to decode JSON from context file. It may be corrupt or empty.")
+            context = None
+        except Exception as e:
+            print(f"Unexpected error when loading context: {e}")
+    result, new_context = zsh_llm_suggestions_ollama(buffer, system_message, context)
+    result=filter_non_ascii(result)
+    if mode == 'freestyle':
+        # Save the new context only for freestyle mode
+        try:
+            with open(os.path.expanduser('~/.ollama_history'), 'w') as file:
+                if new_context is not None:
+                    file.write(json.dumps(new_context))
+        except Exception as e:
+            print(f"Error saving context: {e}")
 
-  if [[ "$mode" == "generate" ]]; then
-    # Place the query in the history first
-    print -s $query
-    # Replace the current buffer with the result
-    ZSH_LLM_SUGGESTIONS_LAST_RESULT=$(cat $result_file)
-    BUFFER="${ZSH_LLM_SUGGESTIONS_LAST_RESULT}"
-    CURSOR=${#ZSH_LLM_SUGGESTIONS_LAST_RESULT}
-  fi
-  if [[ "$mode" == "explain" ]]; then
-    echo ""
-    eval "cat $result_file"
-    echo ""
-    zle reset-prompt
-  fi
-  if [[ "$mode" == "freestyle" ]]; then
-    # Clear the current line
-    BUFFER=""
-    # Optionally, you might want to reset the cursor position
-    CURSOR=0
-    # Now, display the content from the result file and reset the prompt
-    echo ""
-    eval "cat '$result_file'"
-    echo ""
-    zle reset-prompt
-  fi
-}
+    if mode == 'generate':
+        result = result.replace('```bash', '').replace('```zsh', '').replace('```', '').strip()
+        print(result)
+    elif mode == 'explain':
+        print(highlight_explanation(result))
+    elif mode == 'freestyle':
+        print(result)
 
-zsh_llm_suggestions_openai() {
-  zsh_llm_completion "$(dirname "${(%):-%x}")/zsh-llm-suggestions-openai.py" "generate"
-}
-
-zsh_llm_suggestions_github_copilot() {
-  zsh_llm_completion "$(dirname "${(%):-%x}")/zsh-llm-suggestions-github-copilot.py" "generate"
-}
-
-zsh_llm_suggestions_openai_explain() {
-  zsh_llm_completion "$(dirname "${(%):-%x}")/zsh-llm-suggestions-openai.py" "explain"
-}
-
-zsh_llm_suggestions_github_copilot_explain() {
-  zsh_llm_completion "$(dirname "${(%):-%x}")/zsh-llm-suggestions-github-copilot.py" "explain"
-}
-
-zsh_llm_suggestions_ollama() {
-  zsh_llm_completion "$(dirname "${(%):-%x}")/zsh-llm-suggestions-ollama.py" "generate"
-}
-
-zsh_llm_suggestions_ollama_explain() {
-  zsh_llm_completion "$(dirname "${(%):-%x}")/zsh-llm-suggestions-ollama.py" "explain"
-}
-
-zsh_llm_suggestions_ollama_freestyle() {
-  zsh_llm_completion "$(dirname "${(%):-%x}")/zsh-llm-suggestions-ollama.py" "freestyle"
-}
-
-zle -N zsh_llm_suggestions_openai
-zle -N zsh_llm_suggestions_openai_explain
-zle -N zsh_llm_suggestions_github_copilot
-zle -N zsh_llm_suggestions_github_copilot_explain
-zle -N zsh_llm_suggestions_ollama
-zle -N zsh_llm_suggestions_ollama_explain
-zle -N zsh_llm_suggestions_ollama_freestyle
+if __name__ == '__main__':
+    main()
