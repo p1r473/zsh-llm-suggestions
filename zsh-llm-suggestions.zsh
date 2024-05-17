@@ -87,27 +87,27 @@ zsh_llm_completion() {
 }
 
 zsh_llm_suggestions_openai() {
-  zsh_llm_completion "$SCRIPT_DIR/zsh-llm-suggestions-openai.py" "generate"
+  zsh_llm_completion "$(dirname "${(%):-%x}")/zsh-llm-suggestions-openai.py" "generate"
 }
 
 zsh_llm_suggestions_github_copilot() {
-  zsh_llm_completion "$SCRIPT_DIR/zsh-llm-suggestions-github-copilot.py" "generate"
+  zsh_llm_completion "$(dirname "${(%):-%x}")/zsh-llm-suggestions-github-copilot.py" "generate"
 }
 
 zsh_llm_suggestions_openai_explain() {
-  zsh_llm_completion "$SCRIPT_DIR/zsh-llm-suggestions-openai.py" "explain"
+  zsh_llm_completion "$(dirname "${(%):-%x}")/zsh-llm-suggestions-openai.py" "explain"
 }
 
 zsh_llm_suggestions_github_copilot_explain() {
-  zsh_llm_completion "$SCRIPT_DIR/zsh-llm-suggestions-github-copilot.py" "explain"
+  zsh_llm_completion "$(dirname "${(%):-%x}")/zsh-llm-suggestions-github-copilot.py" "explain"
 }
 
 zsh_llm_suggestions_ollama() {
-  zsh_llm_completion "$SCRIPT_DIR/zsh-llm-suggestions-ollama.py" "generate"
+  zsh_llm_completion "$(dirname "${(%):-%x}")/zsh-llm-suggestions-ollama.py" "generate"
 }
 
 zsh_llm_suggestions_ollama_explain() {
-  zsh_llm_completion "$SCRIPT_DIR/zsh-llm-suggestions-ollama.py" "explain"
+  zsh_llm_completion "$(dirname "${(%):-%x}")/zsh-llm-suggestions-ollama.py" "explain"
 }
 
 zsh_llm_suggestions_ollama_freestyle() {
