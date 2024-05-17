@@ -9,7 +9,7 @@ zsh_llm_suggestions_spinner() {
       echo -ne "\e[?25h"
     }
     trap cleanup SIGINT
-    
+
     echo -ne "\e[?25l"
     while [ "$(ps a | awk '{print $1}' | grep $pid)" ]; do
         local temp=${spinstr#?}
@@ -59,7 +59,7 @@ zsh_llm_completion() {
   local pid=$REPLY
   # Call the spinner function and pass the PID
   zsh_llm_suggestions_spinner $pid
-  
+
   if [[ "$mode" == "generate" ]]; then
     # Place the query in the history first
     print -s $query
@@ -74,9 +74,18 @@ zsh_llm_completion() {
     echo ""
     zle reset-prompt
   fi
+  if [[ "$mode" == "freestyle" ]]; then
+    # Clear the current line
+    BUFFER=""
+    # Optionally, you might want to reset the cursor position
+    CURSOR=0
+    # Now, display the content from the result file and reset the prompt
+    echo ""
+    eval "cat '$result_file'"
+    echo ""
+    zle reset-prompt
+  fi
 }
-
-SCRIPT_DIR=$( cd -- "$( dirname -- "$0" )" &> /dev/null && pwd )
 
 zsh_llm_suggestions_openai() {
   zsh_llm_completion "$SCRIPT_DIR/zsh-llm-suggestions-openai.py" "generate"
@@ -94,7 +103,22 @@ zsh_llm_suggestions_github_copilot_explain() {
   zsh_llm_completion "$SCRIPT_DIR/zsh-llm-suggestions-github-copilot.py" "explain"
 }
 
+zsh_llm_suggestions_ollama() {
+  zsh_llm_completion "$SCRIPT_DIR/zsh-llm-suggestions-ollama.py" "generate"
+}
+
+zsh_llm_suggestions_ollama_explain() {
+  zsh_llm_completion "$SCRIPT_DIR/zsh-llm-suggestions-ollama.py" "explain"
+}
+
+zsh_llm_suggestions_ollama_freestyle() {
+  zsh_llm_completion "$(dirname "${(%):-%x}")/zsh-llm-suggestions-ollama.py" "freestyle"
+}
+
 zle -N zsh_llm_suggestions_openai
 zle -N zsh_llm_suggestions_openai_explain
 zle -N zsh_llm_suggestions_github_copilot
 zle -N zsh_llm_suggestions_github_copilot_explain
+zle -N zsh_llm_suggestions_ollama
+zle -N zsh_llm_suggestions_ollama_explain
+zle -N zsh_llm_suggestions_ollama_freestyle
