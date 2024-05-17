@@ -1,4 +1,3 @@
-
 zsh_llm_suggestions_spinner() {
     local pid=$1
     local delay=0.1
