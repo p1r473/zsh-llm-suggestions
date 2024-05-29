@@ -10,6 +10,16 @@ import os
 import socket
 import psutil
 
+def highlight_explanation(explanation):
+    try:
+        import pygments
+        from pygments.lexers import MarkdownLexer
+        from pygments.formatters import TerminalFormatter
+        return pygments.highlight(explanation, MarkdownLexer(), TerminalFormatter(style='material'))
+    except ImportError:
+        print(f'echo "{MISSING_PREREQUISITES} Install pygments" && pip3 install pygments')
+        return explanation  # Return unhighlighted text if pygments is not installed
+
 def get_system_load():
     cpu_usage = psutil.cpu_percent(interval=1)
     memory_usage = psutil.virtual_memory().percent
@@ -109,14 +119,23 @@ def zsh_llm_suggestions_ollama(prompt, system_message=None, context=None):
         return "", None
 
 def main():
-    mode = sys.argv[1]
+    mode = sys.argv[1] if len(sys.argv) > 1 else 'freestyle'
     if mode not in ['generate', 'explain', 'freestyle']:
-        print("ERROR: something went wrong in zsh-llm-suggestions, please report a bug. Got unknown mode: " + mode)
+        print("ERROR: something went wrong in zsh-llm-suggestions, please report a bug. Got unknown mode: " + str(mode))
         return
 
-    buffer = sys.stdin.read()
+    if not sys.stdin.isatty():
+        input_content = sys.stdin.read().strip()  # Read piped input directly
+        if len(sys.argv) > 2:
+            prompt = sys.argv[2]
+            buffer = f"{prompt}\n{input_content}"
+        else:
+            buffer = input_content
+    else:
+        buffer = sys.stdin.read().strip() if not sys.stdin.isatty() else input("Enter your prompt: ").strip()
+
     system_message = None
-    context = None  # Initialize context to None
+    context = None
 
     os_info = get_os_info()
     shell_version = get_shell_version()
