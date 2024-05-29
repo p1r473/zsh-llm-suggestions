@@ -134,7 +134,10 @@ def main():
         else:
             buffer = input_content
     else:
-        buffer = ' '.join(sys.argv[prompt_index:]) if len(sys.argv) > prompt_index else input("Enter your prompt: ").strip()
+        if len(sys.argv) > prompt_index:
+            buffer = ' '.join(sys.argv[prompt_index:])
+        else:
+            buffer = input("Enter your prompt: ").strip()
 
     system_message = None
     context = None
