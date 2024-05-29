@@ -10,6 +10,10 @@ import os
 import socket
 import psutil
 import pygments
+from pygments import highlight
+from pygments.lexers import BashLexer
+from pygments.lexers import MarkdownLexer
+from pygments.formatters import TerminalFormatter
 
 def colorize_output(text):
     try:
@@ -20,13 +24,10 @@ def colorize_output(text):
 
 def highlight_explanation(explanation):
     try:
-        import pygments
-        from pygments.lexers import MarkdownLexer
-        from pygments.formatters import TerminalFormatter
         return pygments.highlight(explanation, MarkdownLexer(), TerminalFormatter(style='material'))
     except ImportError:
         print(f'echo "{MISSING_PREREQUISITES} Install pygments" && pip3 install pygments')
-        return explanation  # Return unhighlighted text if pygments is not installed
+        return explanation
 
 def get_system_load():
     cpu_usage = psutil.cpu_percent(interval=1)
@@ -196,11 +197,11 @@ def main():
 
     if mode == 'generate':
         result = result.replace('```bash', '').replace('```zsh', '').replace('```', '').strip()
-        print(result)
+        print(colorize_output(result))
     elif mode == 'explain':
         print(highlight_explanation(result))
     elif mode == 'freestyle':
-        print(result)
+        print(colorize_output(result))
 
 
 if __name__ == '__main__':
