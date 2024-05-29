@@ -119,20 +119,22 @@ def zsh_llm_suggestions_ollama(prompt, system_message=None, context=None):
         return "", None
 
 def main():
-    mode = sys.argv[1] if len(sys.argv) > 1 else 'freestyle'
-    if mode not in ['generate', 'explain', 'freestyle']:
-        print("ERROR: something went wrong in zsh-llm-suggestions, please report a bug. Got unknown mode: " + str(mode))
-        return
+    if len(sys.argv) > 1 and sys.argv[1] in ['generate', 'explain', 'freestyle']:
+        mode = sys.argv[1]
+        prompt_index = 2
+    else:
+        mode = 'freestyle'  # Default mode
+        prompt_index = 1
 
     if not sys.stdin.isatty():
         input_content = sys.stdin.read().strip()  # Read piped input directly
-        if len(sys.argv) > 2:
-            prompt = sys.argv[2]
+        if len(sys.argv) > prompt_index:
+            prompt = ' '.join(sys.argv[prompt_index:])
             buffer = f"{prompt}\n{input_content}"
         else:
             buffer = input_content
     else:
-        buffer = sys.stdin.read().strip() if not sys.stdin.isatty() else input("Enter your prompt: ").strip()
+        buffer = ' '.join(sys.argv[prompt_index:]) if len(sys.argv) > prompt_index else input("Enter your prompt: ").strip()
 
     system_message = None
     context = None
