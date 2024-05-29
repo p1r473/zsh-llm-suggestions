@@ -9,6 +9,14 @@ import subprocess
 import os
 import socket
 import psutil
+import pygments
+
+def colorize_output(text):
+    try:
+        return highlight(text, BashLexer(), TerminalFormatter())
+    except ImportError:
+        print(f'echo "{MISSING_PREREQUISITES} Install pygments" && pip3 install pygments')
+        return text  # Return unhighlighted text if pygments is not installed
 
 def highlight_explanation(explanation):
     try:
@@ -193,6 +201,7 @@ def main():
         print(highlight_explanation(result))
     elif mode == 'freestyle':
         print(result)
+
 
 if __name__ == '__main__':
     main()
