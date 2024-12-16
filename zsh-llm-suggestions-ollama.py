@@ -13,9 +13,6 @@ import pygments
 
 def colorize_output(text):
     try:
-        import pygments
-        from pygments.lexers import BashLexer
-        from pygments.formatters import TerminalFormatter
         return highlight(text, BashLexer(), TerminalFormatter())
     except ImportError:
         print(f'echo "{MISSING_PREREQUISITES} Install pygments" && pip3 install pygments')
@@ -91,12 +88,16 @@ def highlight_explanation(explanation):
 def send_request(prompt, system_message=None, context=None):
     server_address = os.environ.get('ZSH_LLM_SUGGESTION_SERVER', 'localhost:11434')
     model = os.environ.get('ZSH_LLM_SUGGESTION_MODEL', 'tinyllama')
+    num_ctx = os.environ.get('ZSH_LLM_SUGGESTION_NUM_CTX', '2056')
+
     data = {
         "model": model,
         "prompt": prompt,
-    "keep_alive": "30m",
+        "num_ctx": int(num_ctx),
+        "keep_alive": "30m",
         "stream": False
     }
+
     if system_message:
         data["system"] = system_message
     if context:
@@ -204,6 +205,7 @@ def main():
         print(highlight_explanation(result))
     elif mode == 'freestyle':
         print(result)
+
 
 if __name__ == '__main__':
     main()
