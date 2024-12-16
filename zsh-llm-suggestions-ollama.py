@@ -86,7 +86,7 @@ def highlight_explanation(explanation):
 
 def send_request(prompt, system_message=None, context=None):
     server_address = os.environ.get('ZSH_LLM_SUGGESTION_SERVER', 'localhost:11434')
-    model = os.environ.get('ZSH_LLM_SUGGESTION_MODEL', 'llama3.3')  # Default model
+    model = os.environ.get('ZSH_LLM_SUGGESTION_MODEL', 'tinyllama')  # Default model
 
     # Base request data
     data = {
