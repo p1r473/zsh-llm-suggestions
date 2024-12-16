@@ -20,7 +20,6 @@ def colorize_output(text):
 
 def highlight_explanation(explanation):
     try:
-        import pygments
         from pygments.lexers import MarkdownLexer
         from pygments.formatters import TerminalFormatter
         return pygments.highlight(explanation, MarkdownLexer(), TerminalFormatter(style='material'))
