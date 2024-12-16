@@ -86,20 +86,51 @@ def highlight_explanation(explanation):
 
 def send_request(prompt, system_message=None, context=None):
     server_address = os.environ.get('ZSH_LLM_SUGGESTION_SERVER', 'localhost:11434')
-    model = os.environ.get('ZSH_LLM_SUGGESTION_MODEL', 'tinyllama')
-    num_ctx = os.environ.get('ZSH_LLM_SUGGESTION_NUM_CTX', '2056')
+    model = os.environ.get('ZSH_LLM_SUGGESTION_MODEL', 'llama3.3')  # Default model
 
+    # Base request data
     data = {
         "model": model,
         "prompt": prompt,
-        "num_ctx": int(num_ctx),
         "keep_alive": "30m",
         "stream": False
     }
 
-    if system_message:
-        data["system"] = system_message
-    if context:
+    # Optional parameters: Check and add if set
+    optional_params = [
+        "num_ctx",        # Context length
+        "temperature",    # Sampling randomness
+        "top_k",          # Top-K sampling
+        "top_p",          # Nucleus sampling
+        "repeat_penalty", # Penalizes repetition
+        "frequency_penalty",  # Penalizes frequent tokens
+        "presence_penalty",   # Penalizes new tokens based on presence
+        "mirostat",       # Mirostat sampling
+        "mirostat_tau",   # Mirostat parameter
+        "mirostat_eta",   # Mirostat parameter
+        "stop"            # Stop sequences
+    ]
+
+    for param in optional_params:
+        value = os.environ.get(f"ZSH_LLM_SUGGESTION_{param.upper()}")
+        if value is not None:
+            # Convert numeric values appropriately
+            if param in ["temperature", "top_p", "repeat_penalty", "frequency_penalty", "presence_penalty", "mirostat_tau", "mirostat_eta"]:
+                data[param] = float(value)
+            elif param in ["top_k", "mirostat", "num_ctx"]:
+                data[param] = int(value)
+            elif param == "stop":
+                # Handle stop sequences as a JSON array if provided
+                try:
+                    data[param] = json.loads(value) if value.startswith("[") else value
+                except json.JSONDecodeError:
+                    print(f"Invalid JSON format for {param}, skipping.")
+            else:
+                data[param] = value
+
+    # Handle context if enabled
+    use_context = os.environ.get('ZSH_LLM_SUGGESTION_USE_CONTEXT', 'true').lower() == 'true'
+    if context and use_context:
         data["context"] = context
 
     try:
@@ -109,17 +140,24 @@ def send_request(prompt, system_message=None, context=None):
             text=True,
             timeout=60
         )
+        if response.returncode != 0:
+            return f"Curl error: {response.stderr.strip()}", None
+
         if response.stdout:
-            json_response = json.loads(response.stdout)
-            return json_response.get('response', 'No response received.'), json_response.get('context', None)
+            try:
+                json_response = json.loads(response.stdout)
+                if "error" in json_response:
+                    return f"Error from server: {json_response['error']}", None
+                return json_response.get('response', 'No response received.'), json_response.get('context', None)
+            except json.JSONDecodeError:
+                return f"Invalid JSON response: {response.stdout.strip()}", None
         else:
             return "No response received.", None
+
     except subprocess.TimeoutExpired:
         return "Request timed out. Please try again.", None
-    except json.JSONDecodeError:
-        return "Failed to decode the response. Please check the API response format.", None
     except Exception as e:
-        return f"Error: {str(e)}", None
+        return f"Unexpected error: {str(e)}", None
 
 def zsh_llm_suggestions_ollama(prompt, system_message=None, context=None):
     try:
