@@ -76,7 +76,6 @@ MISSING_PREREQUISITES = "zsh-llm-suggestions missing prerequisites:"
 
 def highlight_explanation(explanation):
     try:
-        import pygments
         from pygments.lexers import MarkdownLexer
         from pygments.formatters import TerminalFormatter
         return pygments.highlight(explanation, MarkdownLexer(), TerminalFormatter(style='material'))
@@ -132,6 +131,11 @@ def send_request(prompt, system_message=None, context=None):
     use_context = os.environ.get('ZSH_LLM_SUGGESTION_USE_CONTEXT', 'true').lower() == 'true'
     if context and use_context:
         data["context"] = context
+
+    debug = os.environ.get('ZSH_LLM_SUGGESTION_DEBUG', 'false').lower() == 'true'
+    if debug:
+            print("Final API Request Payload:")
+            print(json.dumps(data, indent=4))  # Pretty-print the data dictionary for easy debugging
 
     try:
         response = subprocess.run(
