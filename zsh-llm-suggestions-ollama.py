@@ -83,19 +83,33 @@ def highlight_explanation(explanation):
         print(f'echo "{MISSING_PREREQUISITES} Install pygments" && pip3 install pygments')
         return explanation  # Return unhighlighted text if pygments is not installed
 
-def send_request(prompt, system_message=None, context=None):
+def send_request(prompt, system_message=None, context=None, chat_mode=False):
     server_address = os.environ.get('ZSH_LLM_SUGGESTION_SERVER', 'localhost:11434')
     model = os.environ.get('ZSH_LLM_SUGGESTION_MODEL', 'tinyllama')  # Default model
 
-    # Base request data
-    data = {
-        "model": model,
-        "prompt": prompt,
-        "keep_alive": "30m",
-        "stream": False
-    }
+    if chat_mode:
+        # ---- chat endpoint ----
+        data = {
+            "model": model,
+            "messages": []
+        }
+        if system_message:
+            data["messages"].append({"role": "system", "content": system_message})
+        data["messages"].append({"role": "user", "content": prompt})
+        data["keep_alive"] = "30m"
+        data["stream"] = False
+        api_path = "chat"
+    else:
+        # ---- generate endpoint (unchanged) ----
+        data = {
+            "model": model,
+            "prompt": prompt,
+            "keep_alive": "30m",
+            "stream": False
+        }
+        api_path = "generate"
 
-    # Optional parameters: Check and add if set
+    # Optional parameters: Check and add if set   ← **leave your comments exactly as they are**
     optional_params = [
         "num_ctx",        # Context length
         "temperature",    # Sampling randomness
@@ -109,17 +123,14 @@ def send_request(prompt, system_message=None, context=None):
         "mirostat_eta",   # Mirostat parameter
         "stop"            # Stop sequences
     ]
-
     for param in optional_params:
         value = os.environ.get(f"ZSH_LLM_SUGGESTION_{param.upper()}")
         if value is not None:
-            # Convert numeric values appropriately
             if param in ["temperature", "top_p", "repeat_penalty", "frequency_penalty", "presence_penalty", "mirostat_tau", "mirostat_eta"]:
                 data[param] = float(value)
             elif param in ["top_k", "mirostat", "num_ctx"]:
                 data[param] = int(value)
             elif param == "stop":
-                # Handle stop sequences as a JSON array if provided
                 try:
                     data[param] = json.loads(value) if value.startswith("[") else value
                 except json.JSONDecodeError:
@@ -127,22 +138,20 @@ def send_request(prompt, system_message=None, context=None):
             else:
                 data[param] = value
 
-    # Handle context if enabled
     use_context = os.environ.get('ZSH_LLM_SUGGESTION_USE_CONTEXT', 'true').lower() == 'true'
     if context and use_context:
         data["context"] = context
 
     debug = os.environ.get('ZSH_LLM_SUGGESTION_DEBUG', 'false').lower() == 'true'
     if debug:
-            print("Final API Request Payload:")
-            print(json.dumps(data, indent=4))  # Pretty-print the data dictionary for easy debugging
+        print("Final API Request Payload:")
+        print(json.dumps(data, indent=4))
 
     try:
         response = subprocess.run(
-            ["curl", "-XPOST", f"http://{server_address}/api/generate", "-H", "Content-Type: application/json", "-d", json.dumps(data)],
-            capture_output=True,
-            text=True,
-            timeout=60
+            ["curl", "-XPOST", f"http://{server_address}/api/{api_path}",
+             "-H", "Content-Type: application/json", "-d", json.dumps(data)],
+            capture_output=True, text=True, timeout=60
         )
         if response.returncode != 0:
             return f"Curl error: {response.stderr.strip()}", None
@@ -152,7 +161,10 @@ def send_request(prompt, system_message=None, context=None):
                 json_response = json.loads(response.stdout)
                 if "error" in json_response:
                     return f"Error from server: {json_response['error']}", None
-                return json_response.get('response', 'No response received.'), json_response.get('context', None)
+                if chat_mode:
+                    return json_response.get("message", {}).get("content", "No response received."), json_response.get("context", None)
+                else:
+                    return json_response.get("response", "No response received."), json_response.get("context", None)
             except json.JSONDecodeError:
                 return f"Invalid JSON response: {response.stdout.strip()}", None
         else:
@@ -163,13 +175,15 @@ def send_request(prompt, system_message=None, context=None):
     except Exception as e:
         return f"Unexpected error: {str(e)}", None
 
-def zsh_llm_suggestions_ollama(prompt, system_message=None, context=None):
+
+def zsh_llm_suggestions_ollama(prompt, system_message=None, context=None, chat_mode=False):
     try:
-        result, new_context = send_request(prompt, system_message, context)
+        result, new_context = send_request(prompt, system_message, context, chat_mode=chat_mode)
         return result, new_context
     except Exception as e:
         print(f"Error: {e}")
         return "", None
+
 
 def main():
     if len(sys.argv) > 1 and sys.argv[1] in ['generate', 'explain', 'freestyle']:
@@ -221,14 +235,18 @@ def main():
                     context = json.loads(file_contents)
         except FileNotFoundError:
             context = None  # Handle the case where the file does not exist
-            if freestyle_system_message:
+            # If env var is missing or blank, use the first user prompt as system message
+            if not freestyle_system_message or freestyle_system_message.strip() == "":
+                system_message = buffer
+            else:
                 system_message = freestyle_system_message
         except json.JSONDecodeError:
             print("Failed to decode JSON from context file. It may be corrupt or empty.")
             context = None
         except Exception as e:
             print(f"Unexpected error when loading context: {e}")
-    result, new_context = zsh_llm_suggestions_ollama(buffer, system_message, context)
+
+    result, new_context = send_request(buffer, system_message, context, chat_mode=(mode == 'freestyle'))
     result=filter_non_ascii(result)
     if mode == 'freestyle':
         # Save the new context only for freestyle mode
