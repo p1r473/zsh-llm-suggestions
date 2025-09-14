@@ -100,7 +100,7 @@ def send_request(prompt, system_message=None, context=None, chat_mode=False):
         data["stream"] = False
         api_path = "chat"
     else:
-        # ---- generate endpoint (unchanged) ----
+        # ---- generate endpoint ----
         data = {
             "model": model,
             "prompt": prompt,
@@ -109,7 +109,7 @@ def send_request(prompt, system_message=None, context=None, chat_mode=False):
         }
         api_path = "generate"
 
-    # Optional parameters: Check and add if set   ← **leave your comments exactly as they are**
+    # Optional parameters: Check and add if set
     optional_params = [
         "num_ctx",        # Context length
         "temperature",    # Sampling randomness
@@ -149,8 +149,7 @@ def send_request(prompt, system_message=None, context=None, chat_mode=False):
 
     try:
         response = subprocess.run(
-            ["curl", "-XPOST", f"http://{server_address}/api/{api_path}",
-             "-H", "Content-Type: application/json", "-d", json.dumps(data)],
+            ["curl", "-XPOST", f"http://{server_address}/api/{api_path}","-H", "Content-Type: application/json", "-d", json.dumps(data)],
             capture_output=True, text=True, timeout=60
         )
         if response.returncode != 0:
